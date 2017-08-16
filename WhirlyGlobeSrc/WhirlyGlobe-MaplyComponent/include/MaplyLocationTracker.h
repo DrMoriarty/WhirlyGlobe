@@ -55,6 +55,8 @@ typedef enum {MaplyLocationLockNone, MaplyLocationLockNorthUp, MaplyLocationLock
  */
 @interface MaplyLocationTracker : NSObject <CLLocationManagerDelegate>
 
+@property (nonatomic, readonly) MaplyCoordinate deviceLocation;
+
 /** @brief MaplyLocationTracker constructor
  @param viewC The globe or map view controller
  @param delegate The MaplyLocationTrackerDelegate for receiving location event callbacks

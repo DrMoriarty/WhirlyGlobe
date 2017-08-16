@@ -86,6 +86,11 @@
     _delegate = nil;
 }
 
+-(MaplyCoordinate)deviceLocation
+{
+    return _prevLoc;
+}
+
 - (void) changeLockType:(MaplyLocationLockType)lockType forwardTrackOffset:(int)forwardTrackOffset {
     _lockType = lockType;
     _forwardTrackOffset = forwardTrackOffset;
