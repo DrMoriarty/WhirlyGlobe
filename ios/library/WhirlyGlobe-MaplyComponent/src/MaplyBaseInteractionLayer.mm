@@ -222,6 +222,7 @@ public:
     OurClusterGenerator ourClusterGen;
     // Last frame (layout frame, not screen frame)
     std::vector<MaplyTexture *> currentClusterTex,oldClusterTex;
+    NSMutableArray *backgroundOperations;
 }
 
 - (instancetype)initWithView:(WhirlyKitView *)inVisualView
@@ -231,6 +232,7 @@ public:
         return nil;
     
 //    NSLog(@"Creating interactLayer %lx",(long)self);
+    backgroundOperations = [NSMutableArray new];
     
     visualView = inVisualView;
     pthread_mutex_init(&selectLock, NULL);
@@ -247,7 +249,7 @@ public:
     pthread_mutex_lock(&changeLock);
     pthread_mutex_lock(&tempContextLock);
     pthread_mutex_lock(&workLock);
-    
+
     return self;
 }
 
@@ -282,12 +284,34 @@ public:
         layoutManager->addClusterGenerator(&ourClusterGen);
     }
     
+    // call it 20 times per second
+    [NSTimer scheduledTimerWithTimeInterval:0.05 target:self selector:@selector(doBackgroundJob) userInfo:nil repeats:YES];
+
     // We locked these in hopes of slowing down anyone trying to race us.  Unlock 'em.
     pthread_mutex_unlock(&selectLock);
     pthread_mutex_unlock(&imageLock);
     pthread_mutex_unlock(&changeLock);
     pthread_mutex_unlock(&tempContextLock);
     pthread_mutex_unlock(&workLock);
+}
+     
+-(void)doBackgroundJob
+{
+    const int maxJobs = 250; // 5000 objects per second
+    int jobs = 0;
+    while(backgroundOperations.count > 0) {
+        NSDictionary *job = nil;
+        @synchronized (backgroundOperations) {
+            job = backgroundOperations[0];
+            [backgroundOperations removeObjectAtIndex:0];
+        }
+        SEL selector = (SEL)[job[@"selector"] pointerValue];
+        id args = job[@"args"];
+        [self performSelector:selector onThread:layerThread withObject:args waitUntilDone:YES];
+        jobs ++;
+        if(jobs >= maxJobs)
+            break;
+    }
 }
 
 - (void)teardown
@@ -933,7 +957,11 @@ public:
             [self addScreenMarkersRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addScreenMarkersRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addScreenMarkersRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addScreenMarkersRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -1191,7 +1219,11 @@ public:
             [self addMarkersRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addMarkersRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addMarkersRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addMarkersRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -1385,7 +1417,11 @@ public:
             [self addScreenLabelsRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addScreenLabelsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addScreenLabelsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addScreenLabelsRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -1507,7 +1543,11 @@ public:
             [self addLabelsRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addLabelsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addLabelsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addLabelsRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -1638,7 +1678,11 @@ public:
             [self addVectorsRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addVectorsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addVectorsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addVectorsRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -1758,7 +1802,11 @@ public:
             [self addWideVectorsRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addWideVectorsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addWideVectorsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addWideVectorsRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -1846,7 +1894,11 @@ public:
             [self instanceVectorsRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(instanceVectorsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(instanceVectorsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(instanceVectorsRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -1929,7 +1981,11 @@ public:
             [self changeVectorRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(changeVectorRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(changeVectorRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(changeVectorRun:)], @"args":argArray}];
+            }
             break;
     }
 }
@@ -2160,7 +2216,11 @@ public:
             [self addShapesRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addShapesRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addShapesRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addShapesRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -2424,7 +2484,11 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
             [self addModelInstancesRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addModelInstancesRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addModelInstancesRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addModelInstancesRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -2453,7 +2517,11 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
             [self addGeometryRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addGeometryRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addGeometryRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addGeometryRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -2576,7 +2644,11 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
             [self addStickersRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addStickersRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addStickersRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addStickersRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -2669,7 +2741,11 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
             [self changeStickerRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(changeStickerRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(changeStickerRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(changeStickerRun:)], @"args":argArray}];
+            }
             break;
     }
 }
@@ -2743,7 +2819,11 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
             [self addLoftedPolysRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addLoftedPolysRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addLoftedPolysRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addLoftedPolysRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -2915,7 +2995,11 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
             [self addBillboardsRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addBillboardsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addBillboardsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addBillboardsRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -3044,7 +3128,11 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
             [self addParticleSystemRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addParticleSystemRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addParticleSystemRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addParticleSystemRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -3112,7 +3200,11 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
             [self addParticleSystemBatchRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addParticleSystemBatchRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addParticleSystemBatchRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addParticleSystemBatchRun:)], @"args":argArray}];
+            }
             break;
     }
 }
@@ -3176,7 +3268,11 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
             [self addPointsRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(addPointsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(addPointsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(addPointsRun:)], @"args":argArray}];
+            }
             break;
     }
     
@@ -3338,7 +3434,11 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
             [self removeObjectRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(removeObjectRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(removeObjectRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(removeObjectRun:)], @"args":argArray}];
+            }
             break;
     }
 }
@@ -3424,7 +3524,11 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
             [self enableObjectsRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(enableObjectsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(enableObjectsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(enableObjectsRun:)], @"args":argArray}];
+            }
             break;
     }    
 }
@@ -3451,7 +3555,11 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
             [self enableObjectsRun:argArray];
             break;
         case MaplyThreadAny:
-            [self performSelector:@selector(enableObjectsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            // TODO
+            //[self performSelector:@selector(enableObjectsRun:) onThread:layerThread withObject:argArray waitUntilDone:NO];
+            @synchronized (backgroundOperations) {
+                [backgroundOperations addObject:@{@"selector":[NSValue valueWithPointer:@selector(enableObjectsRun:)], @"args":argArray}];
+            }
             break;
     }
 }
