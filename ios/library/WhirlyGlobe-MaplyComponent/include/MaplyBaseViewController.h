@@ -81,6 +81,8 @@ typedef NS_ENUM(NSInteger, MaplyThreadMode) {
  */
 @interface MaplyBaseViewController : UIViewController
 
+@property(nonatomic, readonly) NSInteger backgroundQueueLength;
+
 /** 
     Turn selection on or off globally.
     

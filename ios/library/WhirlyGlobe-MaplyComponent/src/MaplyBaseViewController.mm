@@ -1508,4 +1508,9 @@ static const float PerfOutputDelay = 15.0;
     return [NSArray arrayWithArray:userLayers];
 }
 
+-(NSInteger)backgroundQueueLength
+{
+    return interactLayer->backgroundOperations.count;
+}
+
 @end

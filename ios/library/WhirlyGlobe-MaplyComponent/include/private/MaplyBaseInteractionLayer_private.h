@@ -60,6 +60,8 @@
     
     // Set when we're trying to shut things down
     bool isShuttingDown;
+
+    NSMutableArray *backgroundOperations;
 }
 
 // Note: Not a great idea to be passing this in

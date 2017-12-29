@@ -40,6 +40,8 @@
 #import "MaplyShape_private.h"
 #import "MaplyPoints_private.h"
 #import "MaplyRenderTarget_private.h"
+#include <mach/mach.h>
+#include <mach/mach_time.h>
 
 using namespace Eigen;
 using namespace WhirlyKit;
@@ -222,7 +224,7 @@ public:
     OurClusterGenerator ourClusterGen;
     // Last frame (layout frame, not screen frame)
     std::vector<MaplyTexture *> currentClusterTex,oldClusterTex;
-    NSMutableArray *backgroundOperations;
+    mach_timebase_info_data_t _clock_timebase;
 }
 
 - (instancetype)initWithView:(WhirlyKitView *)inVisualView
@@ -250,6 +252,8 @@ public:
     pthread_mutex_lock(&tempContextLock);
     pthread_mutex_lock(&workLock);
 
+    mach_timebase_info(&_clock_timebase);
+    
     return self;
 }
 
@@ -265,6 +269,13 @@ public:
     pthread_cond_destroy(&workWait);
     
     [NSObject cancelPreviousPerformRequestsWithTarget:self];
+}
+
+- (uint64_t)getTimeNanos
+{
+    uint64_t machtime = mach_absolute_time();
+    uint64_t nanos = (machtime * _clock_timebase.numer) / _clock_timebase.denom;
+    return nanos;
 }
 
 - (void)startWithThread:(WhirlyKitLayerThread *)inLayerThread scene:(WhirlyKit::Scene *)inScene
@@ -285,7 +296,8 @@ public:
     }
     
     // call it 20 times per second
-    [NSTimer scheduledTimerWithTimeInterval:0.05 target:self selector:@selector(doBackgroundJob) userInfo:nil repeats:YES];
+    //[NSTimer scheduledTimerWithTimeInterval:0.05 target:self selector:@selector(doBackgroundJob) userInfo:nil repeats:YES];
+    [self performSelectorInBackground:@selector(doBackgroundJob) withObject:nil];
 
     // We locked these in hopes of slowing down anyone trying to race us.  Unlock 'em.
     pthread_mutex_unlock(&selectLock);
@@ -297,20 +309,19 @@ public:
      
 -(void)doBackgroundJob
 {
-    const int maxJobs = 250; // 5000 objects per second
-    int jobs = 0;
-    while(backgroundOperations.count > 0) {
-        NSDictionary *job = nil;
-        @synchronized (backgroundOperations) {
-            job = backgroundOperations[0];
-            [backgroundOperations removeObjectAtIndex:0];
+    while (true) {
+        if(backgroundOperations.count > 0) {
+            NSDictionary *job = nil;
+            @synchronized (backgroundOperations) {
+                job = backgroundOperations[0];
+                [backgroundOperations removeObjectAtIndex:0];
+            }
+            SEL selector = (SEL)[job[@"selector"] pointerValue];
+            id args = job[@"args"];
+            [self performSelector:selector onThread:layerThread withObject:args waitUntilDone:YES];
+        } else {
+            [NSThread sleepForTimeInterval:0.001];
         }
-        SEL selector = (SEL)[job[@"selector"] pointerValue];
-        id args = job[@"args"];
-        [self performSelector:selector onThread:layerThread withObject:args waitUntilDone:YES];
-        jobs ++;
-        if(jobs >= maxJobs)
-            break;
     }
 }
 

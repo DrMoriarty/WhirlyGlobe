@@ -37,6 +37,8 @@
   */
 - (nullable instancetype)initWithObj:(NSString *__nonnull)fullPath;
 
+- (nullable instancetype)initWithObj:(NSString *__nonnull)fullPath mtl:(NSString *__nonnull)mtlPath;
+
 /** 
     Initialize with a shape.
     

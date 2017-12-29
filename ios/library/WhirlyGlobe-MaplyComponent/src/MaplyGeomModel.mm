@@ -53,6 +53,32 @@ using namespace Eigen;
     return self;
 }
 
+- (instancetype)initWithObj:(NSString *)fullPath mtl:(NSString *)mtlPath
+{
+    self = [super init];
+    
+    const char *str = [fullPath cStringUsingEncoding:NSASCIIStringEncoding];
+    FILE *fp = fopen(str, "r");
+    if (!fp)
+        return nil;
+
+    const char *str2 = [mtlPath cStringUsingEncoding:NSASCIIStringEncoding];
+    FILE *fm = fopen(str2, "r");
+    if (!fm)
+        return nil;
+
+    // Parse it out of the file
+    GeometryModelOBJ objModel;
+    if(!objModel.parseMaterials(fm))
+        return nil;
+    if (!objModel.parse(fp))
+        return nil;
+    
+    objModel.toRawGeometry(textures,rawGeom);
+    
+    return self;
+}
+
 - (instancetype)initWithShape:(MaplyShape *)inShape;
 {
     self = [super init];
