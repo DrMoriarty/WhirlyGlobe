@@ -1621,8 +1621,9 @@ using namespace WhirlyGlobe;
     if (right.squaredNorm() < 1e-5)
         right = Vector3f(1,0,0);
     Eigen::Affine3f tiltRot(Eigen::AngleAxisf(tilt,right));
+    Eigen::Affine3f headingRot(Eigen::AngleAxisf(-heading,p0norm));
     Vector3f p0normRange = p0norm * (range);
-    Vector4f rVec4 = tiltRot.matrix() * Vector4f(p0normRange.x(), p0normRange.y(), p0normRange.z(),1.0);
+    Vector4f rVec4 = headingRot.matrix() * tiltRot.matrix() * Vector4f(p0normRange.x(), p0normRange.y(), p0normRange.z(),1.0);
     Vector3f rVec(rVec4.x(),rVec4.y(),rVec4.z());
     Vector3f p1 = p0 + rVec;
     Vector3f p1norm = p1.normalized();
