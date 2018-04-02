@@ -1236,6 +1236,8 @@ typedef std::set<QuadPagingLoadedTile *,QuadPagingLoadedTileSorter> QuadPagingLo
         [_viewC endChanges];
     }
 
+    [quadLayer setEnable:topEnable];
+    
     pthread_mutex_unlock(&refreshLock);
 }
 
